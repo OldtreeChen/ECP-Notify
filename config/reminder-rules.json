@@ -1,12 +1,39 @@
 [
   {
     "id": "project-dept-2-group",
-    "name": "專案二部近7天",
-    "title": "ECP 專案二部任務",
+    "name": "\u5c08\u6848\u4e8c\u90e8\u8fd17\u5929",
+    "title": "ECP \u5c08\u6848\u4e8c\u90e8\u4efb\u52d9",
+    "enabled": false,
     "to": "C4854aafe7d89296a67cc2306c2c33cdd",
     "schemaId": "ffffff19-cc0e-1122-5001-6006b23cf204",
+    "identityId": "d8bf955b-0ac0-11ea-9186-0a79a042dc0a",
     "listId": "296aa935-f6c0-4a8e-9ab9-32254ea39861",
     "pageSize": 200,
     "dueSoonHours": 168
+  },
+  {
+    "id": "cloud-service-group",
+    "name": "\u96f2\u7aef\u670d\u52d9\u90e8\u8fd17\u5929",
+    "title": "ECP \u96f2\u7aef\u670d\u52d9\u90e8\u4efb\u52d9",
+    "enabled": true,
+    "to": "C648706ffd32b69b91783d673fe9719ec",
+    "schemaId": "ffffff19-d0f5-28b8-2806-9bd1843cf204",
+    "identityId": "9a4ea951-eac3-11f0-92f3-0607bbc2ee97",
+    "listId": "296aa935-f6c0-4a8e-9ab9-32254ea39861",
+    "pageSize": 200,
+    "dueSoonHours": 168
+  },
+  {
+    "id": "project-dept-2-teams",
+    "name": "\u5c08\u6848\u4e8c\u90e8\u9031\u4e00\u9031\u4e94\u63d0\u9192",
+    "title": "ECP \u5c08\u6848\u4e8c\u90e8\u4efb\u52d9",
+    "enabled": true,
+    "teamsWebhookEnv": "TEAMS_PROJECT2_WEBHOOK_URL",
+    "schemaId": "ffffff19-cc0e-1122-5001-6006b23cf204",
+    "identityId": "d8bf955b-0ac0-11ea-9186-0a79a042dc0a",
+    "listId": "296aa935-f6c0-4a8e-9ab9-32254ea39861",
+    "pageSize": 200,
+    "dueSoonHours": 168,
+    "scheduleWeekdays": [1, 5]
   }
 ]

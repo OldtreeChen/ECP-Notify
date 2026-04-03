@@ -42,6 +42,7 @@ Rule fields:
 - `id`: stable identifier for de-duplication
 - `name`: readable rule name
 - `title`: LINE card title
+- `enabled`: whether the rule is active
 - `to`: LINE user/group/room id
 - `schemaId`: ECP query schema
 - `listId`: ECP list id

@@ -3,7 +3,7 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import express from "express";
-import { runReminderJob, sendLineText } from "./index.js";
+import { queryDepartmentTasks, runReminderJob, sendLineText } from "./index.js";
 
 const DATA_DIR = path.resolve(".data");
 const SOURCE_FILE = path.join(DATA_DIR, "line-sources.json");
@@ -52,9 +52,9 @@ app.post(
             event.message?.type === "text" &&
             event.replyToken
           ) {
-            const messageText = buildReplyMessage(event, sourceInfo);
-            if (channelAccessToken) {
-              await replyMessage(channelAccessToken, event.replyToken, messageText);
+            const reply = await buildReply(event, sourceInfo);
+            if (channelAccessToken && reply) {
+              await replyMessage(channelAccessToken, event.replyToken, reply);
             }
           }
         } catch (error) {
@@ -86,7 +86,11 @@ app.listen(port, host, () => {
   console.log(`ECP LINE server listening on http://${host}:${port}`);
 });
 
-startReminderScheduler();
+if (String(process.env.ENABLE_SCHEDULER || "true").toLowerCase() === "true") {
+  startReminderScheduler();
+} else {
+  console.log("Built-in scheduler disabled for this process.");
+}
 
 function verifyLineSignature(rawBody, signature, secret) {
   if (!rawBody || !signature || !secret) {
@@ -122,21 +126,91 @@ function normalizeSource(source) {
   };
 }
 
-function buildReplyMessage(event, sourceInfo) {
+async function buildReply(event, sourceInfo) {
   const text = event.message?.text?.trim() || "";
+
   if (/^id$/i.test(text) || /^whoami$/i.test(text) || /source/i.test(text)) {
-    return [
-      "LINE source captured.",
-      `type: ${sourceInfo?.type || "unknown"}`,
-      `id: ${sourceInfo?.id || "unknown"}`
-    ].join("\n");
+    return {
+      messages: [
+        {
+          type: "text",
+          text: [
+            "LINE source captured.",
+            `type: ${sourceInfo?.type || "unknown"}`,
+            `id: ${sourceInfo?.id || "unknown"}`
+          ].join("\n")
+        }
+      ]
+    };
   }
 
+  const command = parseTaskCommand(text);
+  if (command) {
+    try {
+      const result = await queryDepartmentTasks(command);
+      return { messages: result.messages.slice(0, 5) };
+    } catch (error) {
+      return {
+        messages: [
+          {
+            type: "text",
+            text: `查詢失敗：${formatErrorMessage(error)}`
+          }
+        ]
+      };
+    }
+  }
+
+  return {
+    messages: [
+      {
+        type: "text",
+        text: buildHelpText()
+      }
+    ]
+  };
+}
+
+function parseTaskCommand(text) {
+  const normalized = String(text || "").replace(/\s+/g, "");
+  if (!normalized) {
+    return null;
+  }
+
+  const department =
+    normalized.includes("專案一部") || normalized.includes("一部")
+      ? "project1"
+      : normalized.includes("專案二部") || normalized.includes("二部")
+        ? "project2"
+        : normalized.includes("雲端服務部") || normalized.includes("雲端")
+          ? "cloud"
+          : null;
+
+  if (!department) {
+    return null;
+  }
+
+  let mode = "dueSoon";
+  if (normalized.includes("未完成")) {
+    mode = "open";
+  } else if (normalized.includes("逾期")) {
+    mode = "overdue";
+  }
+
+  return {
+    department,
+    mode,
+    hours: 168
+  };
+}
+
+function buildHelpText() {
   return [
-    "Webhook is working.",
-    `type: ${sourceInfo?.type || "unknown"}`,
-    `id: ${sourceInfo?.id || "unknown"}`,
-    "Reply with `id` to show the target ID again."
+    "可直接輸入下列查詢指令：",
+    "例如：",
+    "專案二部 近7天",
+    "專案一部 逾期",
+    "雲端服務部 未完成"
   ].join("\n");
 }
 
@@ -159,7 +233,16 @@ function upsertSource(sourceInfo) {
   fs.writeFileSync(SOURCE_FILE, JSON.stringify(sources, null, 2), "utf8");
 }
 
-async function replyMessage(accessToken, replyToken, text) {
+async function replyMessage(accessToken, replyToken, reply) {
+  const messages = Array.isArray(reply?.messages)
+    ? reply.messages
+    : [
+        {
+          type: "text",
+          text: String(reply?.text || "").slice(0, 5000)
+        }
+      ];
+
   const response = await fetch("https://api.line.me/v2/bot/message/reply", {
     method: "POST",
     headers: {
@@ -168,12 +251,7 @@ async function replyMessage(accessToken, replyToken, text) {
     },
     body: JSON.stringify({
       replyToken,
-      messages: [
-        {
-          type: "text",
-          text: String(text || "").slice(0, 5000)
-        }
-      ]
+      messages
     })
   });
 
@@ -221,7 +299,7 @@ async function notifyReminderFailure(error, scheduleKey) {
   }
 
   const message = [
-    "ECP 專案二部任務提醒失敗",
+    "ECP 任務提醒失敗",
     `時間: ${formatAlertTimestamp(new Date(), scheduleTimezone)}`,
     `排程: 上班日 ${String(scheduleHour).padStart(2, "0")}:${String(scheduleMinute).padStart(2, "0")}`,
     `批次: ${scheduleKey}`,

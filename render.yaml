@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: ecp-notify-web
+    runtime: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: ENABLE_SCHEDULER
+        value: "false"
+      - key: SCHEDULE_TIMEZONE
+        value: Asia/Taipei
+      - key: REMINDER_RULES_FILE
+        value: ./config/reminder-rules.json
+
+  - type: cron
+    name: ecp-notify-cron
+    runtime: node
+    plan: starter
+    schedule: "0 2 * * 1-5"
+    buildCommand: npm install
+    startCommand: npm run reminder
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: REMINDER_RUN_SOURCE
+        value: scheduler
+      - key: DRY_RUN
+        value: "false"
+      - key: SCHEDULE_TIMEZONE
+        value: Asia/Taipei
+      - key: REMINDER_RULES_FILE
+        value: ./config/reminder-rules.json
