@@ -1,0 +1,61 @@
+name: ECP Reminder
+
+on:
+  schedule:
+    - cron: "0 2 * * 1-5"
+  workflow_dispatch:
+    inputs:
+      live_send:
+        description: "Send live notifications"
+        required: false
+        default: "false"
+      line_to_override:
+        description: "Optional LINE user/group ID override"
+        required: false
+        default: ""
+      disable_teams:
+        description: "Disable Teams delivery for this run"
+        required: false
+        default: "true"
+
+jobs:
+  reminder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      ECP_BASE_URL: ${{ secrets.ECP_BASE_URL }}
+      ECP_LOGIN_NAME: ${{ secrets.ECP_LOGIN_NAME }}
+      ECP_PASSWORD: ${{ secrets.ECP_PASSWORD }}
+      ECP_TASK_SCHEMA_ID: ${{ secrets.ECP_TASK_SCHEMA_ID }}
+      ECP_TASK_LIST_ID: ${{ secrets.ECP_TASK_LIST_ID }}
+      ECP_PAGE_SIZE: ${{ secrets.ECP_PAGE_SIZE }}
+      ECP_PROJECT1_IDENTITY_ID: ${{ secrets.ECP_PROJECT1_IDENTITY_ID }}
+      ECP_PROJECT2_IDENTITY_ID: ${{ secrets.ECP_PROJECT2_IDENTITY_ID }}
+      ECP_CLOUD_IDENTITY_ID: ${{ secrets.ECP_CLOUD_IDENTITY_ID }}
+      DUE_SOON_HOURS: ${{ secrets.DUE_SOON_HOURS }}
+      LINE_CHANNEL_ID: ${{ secrets.LINE_CHANNEL_ID }}
+      LINE_CHANNEL_SECRET: ${{ secrets.LINE_CHANNEL_SECRET }}
+      LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+      LINE_TO: ${{ github.event.inputs.line_to_override || secrets.LINE_TO }}
+      LINE_ALERT_TO: ${{ secrets.LINE_ALERT_TO }}
+      TEAMS_PROJECT2_WEBHOOK_URL: ${{ github.event.inputs.disable_teams == 'true' && '' || secrets.TEAMS_PROJECT2_WEBHOOK_URL }}
+      REMINDER_RULES_JSON: ${{ secrets.REMINDER_RULES_JSON }}
+      SCHEDULE_TIMEZONE: Asia/Taipei
+      REMINDER_RUN_SOURCE: scheduler
+      ALLOW_MANUAL_LIVE_SEND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.live_send || 'false' }}
+      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.live_send == 'true' && 'false' || 'true' }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run reminder
+        run: npm run reminder
