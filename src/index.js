@@ -262,7 +262,8 @@ function getConfig(options = {}) {
     executorAllowlist: parseList(process.env.EXECUTOR_ALLOWLIST)
   };
 
-  const rules = loadRules(defaultRule);
+  const runSource = getRunSource(options);
+  const rules = applyNonSchedulerSafety(loadRules(defaultRule), runSource);
   if (rules.length === 0) {
     throw new Error("No enabled reminder rules configured.");
   }
@@ -272,8 +273,13 @@ function getConfig(options = {}) {
     lineChannelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
     scheduleTimezone: process.env.SCHEDULE_TIMEZONE || "Asia/Taipei",
     dryRun: getDryRunValue(options),
+    runSource,
     rules
   };
+}
+
+function getRunSource(options = {}) {
+  return String(options.runSource || process.env.REMINDER_RUN_SOURCE || "manual");
 }
 
 function getDryRunValue(options = {}) {
@@ -285,7 +291,7 @@ function getDryRunValue(options = {}) {
     return true;
   }
 
-  const runSource = String(options.runSource || process.env.REMINDER_RUN_SOURCE || "manual");
+  const runSource = getRunSource(options);
   const allowManualLiveSend =
     String(process.env.ALLOW_MANUAL_LIVE_SEND || "false").toLowerCase() === "true";
 
@@ -294,6 +300,19 @@ function getDryRunValue(options = {}) {
   }
 
   return false;
+}
+
+function applyNonSchedulerSafety(rules, runSource) {
+  if (runSource === "scheduler") {
+    return rules;
+  }
+
+  const personalLineId = String(process.env.LINE_ALERT_TO || "").trim();
+  return rules.map((rule) => ({
+    ...rule,
+    to: personalLineId,
+    teamsWebhookUrl: ""
+  }));
 }
 
 function loadRules(defaultRule) {
