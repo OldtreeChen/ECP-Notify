@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       live_send:
-        description: "Send live notifications"
+        description: "Ignored for safety. Manual runs stay dry-run."
         required: false
         default: "false"
       line_to_override:
@@ -42,8 +42,8 @@ jobs:
       REMINDER_RULES_JSON: ${{ secrets.REMINDER_RULES_JSON }}
       SCHEDULE_TIMEZONE: Asia/Taipei
       REMINDER_RUN_SOURCE: scheduler
-      ALLOW_MANUAL_LIVE_SEND: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.live_send == 'true' && 'true' || 'false' }}
-      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || (github.event_name == 'workflow_dispatch' && github.event.inputs.live_send == 'true' && 'false' || 'true') }}
+      ALLOW_MANUAL_LIVE_SEND: 'false'
+      DRY_RUN: ${{ github.event_name == 'schedule' && 'false' || 'true' }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4

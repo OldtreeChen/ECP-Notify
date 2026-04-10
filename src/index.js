@@ -273,7 +273,6 @@ function getConfig(options = {}) {
     lineChannelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN,
     scheduleTimezone: process.env.SCHEDULE_TIMEZONE || "Asia/Taipei",
     dryRun: getDryRunValue(options),
-    runSource,
     rules
   };
 }
@@ -292,10 +291,7 @@ function getDryRunValue(options = {}) {
   }
 
   const runSource = getRunSource(options);
-  const allowManualLiveSend =
-    String(process.env.ALLOW_MANUAL_LIVE_SEND || "false").toLowerCase() === "true";
-
-  if (runSource !== "scheduler" && !allowManualLiveSend) {
+  if (runSource !== "scheduler") {
     return true;
   }
 
@@ -307,10 +303,9 @@ function applyNonSchedulerSafety(rules, runSource) {
     return rules;
   }
 
-  const personalLineId = String(process.env.LINE_ALERT_TO || "").trim();
   return rules.map((rule) => ({
     ...rule,
-    to: personalLineId,
+    to: "",
     teamsWebhookUrl: ""
   }));
 }
