@@ -2,7 +2,7 @@ name: ECP Reminder
 
 on:
   schedule:
-    - cron: "0 2 * * 1-5"
+    - cron: "3 4 * * 1-5"
   workflow_dispatch:
     inputs:
       live_send:
