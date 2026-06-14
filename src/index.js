@@ -244,7 +244,8 @@ function getBaseConfig() {
   return {
     baseUrl: process.env.ECP_BASE_URL.replace(/\/+$/, ""),
     loginName: process.env.ECP_LOGIN_NAME,
-    password: process.env.ECP_PASSWORD
+    password: process.env.ECP_PASSWORD,
+    totpSecret: process.env.ECP_TOTP_SECRET || ""
   };
 }
 
@@ -465,13 +466,23 @@ class EcpClient {
     const publicKeyResponse = await this.postJson("/Qs.Misc.getLoginPublicKey.data", {});
     const encryptedPassword = encryptPassword(publicKeyResponse.publicKey, this.config.password);
 
-    await this.postJson("/Qs.OnlineUser.login.data", {
+    const loginArgs = {
       loginName: this.config.loginName,
       password: encryptedPassword,
       language: "zh-tw",
       extraArgs: null,
       checkRelogin: true
-    });
+    };
+
+    const firstResult = await this.postJson("/Qs.OnlineUser.login.data", loginArgs);
+
+    if (firstResult?.requireTotp) {
+      if (!this.config.totpSecret) {
+        throw new Error("ECP login requires TOTP but ECP_TOTP_SECRET is not set.");
+      }
+      const totpCode = generateTotp(this.config.totpSecret);
+      await this.postJson("/Qs.OnlineUser.login.data", { ...loginArgs, totpCode });
+    }
   }
 
   async switchIdentity(identityId) {
@@ -553,6 +564,38 @@ class EcpClient {
 
     this.cookie = [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
   }
+}
+
+function generateTotp(secret, timeStep = 30, digits = 6) {
+  const base32Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+  const normalized = secret.toUpperCase().replace(/\s+/g, "").replace(/=+$/, "");
+  const bits = [];
+  for (const char of normalized) {
+    const val = base32Chars.indexOf(char);
+    if (val < 0) continue;
+    for (let i = 4; i >= 0; i--) bits.push((val >> i) & 1);
+  }
+  const keyBytes = [];
+  for (let i = 0; i + 7 < bits.length; i += 8) {
+    keyBytes.push(bits.slice(i, i + 8).reduce((acc, b) => (acc << 1) | b, 0));
+  }
+  const key = Buffer.from(keyBytes);
+  const counter = Math.floor(Date.now() / 1000 / timeStep);
+  const timeBuffer = Buffer.alloc(8);
+  let remaining = counter;
+  for (let i = 7; i >= 0; i--) {
+    timeBuffer[i] = remaining & 0xff;
+    remaining = Math.floor(remaining / 256);
+  }
+  const hmac = crypto.createHmac("sha1", key).update(timeBuffer).digest();
+  const offset = hmac[hmac.length - 1] & 0x0f;
+  const code =
+    (((hmac[offset] & 0x7f) << 24) |
+     ((hmac[offset + 1] & 0xff) << 16) |
+     ((hmac[offset + 2] & 0xff) << 8) |
+     (hmac[offset + 3] & 0xff)) %
+    Math.pow(10, digits);
+  return String(code).padStart(digits, "0");
 }
 
 function encryptPassword(publicKeyBase64, password) {

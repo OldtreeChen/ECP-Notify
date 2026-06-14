@@ -26,6 +26,7 @@ jobs:
       ECP_BASE_URL: ${{ secrets.ECP_BASE_URL }}
       ECP_LOGIN_NAME: ${{ secrets.ECP_LOGIN_NAME }}
       ECP_PASSWORD: ${{ secrets.ECP_PASSWORD }}
+      ECP_TOTP_SECRET: ${{ secrets.ECP_TOTP_SECRET }}
       ECP_TASK_SCHEMA_ID: ${{ secrets.ECP_TASK_SCHEMA_ID }}
       ECP_TASK_LIST_ID: ${{ secrets.ECP_TASK_LIST_ID }}
       ECP_PAGE_SIZE: ${{ secrets.ECP_PAGE_SIZE }}
