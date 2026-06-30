@@ -1402,7 +1402,16 @@ async function sendTeamsCards(webhookUrl, cards) {
       headers: {
         "Content-Type": "application/json"
       },
-      body: JSON.stringify(card)
+      body: JSON.stringify({
+        type: "message",
+        attachments: [
+          {
+            contentType: "application/vnd.microsoft.card.adaptive",
+            contentUrl: null,
+            content: card
+          }
+        ]
+      })
     });
 
     if (!response.ok) {
