@@ -15,7 +15,7 @@
     "id": "cloud-service-group",
     "name": "\u96f2\u7aef\u670d\u52d9\u90e8\u8fd17\u5929",
     "title": "ECP \u96f2\u7aef\u670d\u52d9\u90e8\u4efb\u52d9",
-    "enabled": true,
+    "enabled": false,
     "to": "C648706ffd32b69b91783d673fe9719ec",
     "schemaId": "ffffff19-d0f5-28b8-2806-9bd1843cf204",
     "identityId": "9a4ea951-eac3-11f0-92f3-0607bbc2ee97",
