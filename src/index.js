@@ -354,13 +354,16 @@ function normalizeRule(rule, index) {
     return normalized;
   }
   if (!normalized.to && !normalized.teamsWebhookUrl) {
-    throw new Error(`Reminder rule ${normalized.name} must define "to" or "teamsWebhookUrl".`);
+    console.warn(`[skip] Rule "${normalized.name}": no LINE target or Teams webhook configured — rule disabled.`);
+    return { ...normalized, enabled: false };
   }
   if (!normalized.schemaId) {
-    throw new Error(`Reminder rule ${normalized.name} is missing "schemaId".`);
+    console.warn(`[skip] Rule "${normalized.name}": missing schemaId — rule disabled.`);
+    return { ...normalized, enabled: false };
   }
   if (!normalized.listId) {
-    throw new Error(`Reminder rule ${normalized.name} is missing "listId".`);
+    console.warn(`[skip] Rule "${normalized.name}": missing listId — rule disabled.`);
+    return { ...normalized, enabled: false };
   }
 
   return normalized;
