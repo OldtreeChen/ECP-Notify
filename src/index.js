@@ -78,39 +78,52 @@ export async function runReminderJob(options = {}) {
   let overdueCount = 0;
   let dueSoonCount = 0;
 
+  const ruleErrors = [];
+
   for (const rule of config.rules) {
     if (!shouldRunRuleToday(rule, config.scheduleTimezone)) {
       continue;
     }
 
-    if (rule.identityId) {
-      await ecp.switchIdentity(rule.identityId);
-    }
-
-    const result = await queryRule(ecp, rule);
-    const notification = buildNotification(result, nextState, rule);
-    if (!notification) {
-      continue;
-    }
-
-    if (config.dryRun) {
-      console.log(`[DRY RUN] ${rule.name}`);
-      console.log(notification.previewText);
-    } else {
-      const deliveryResult = await deliverNotification(config, rule, notification);
-      if (!deliveryResult.delivered) {
-        throw new Error(
-          `No notification destinations succeeded for ${rule.name}: ${deliveryResult.errors.join(" | ")}`
-        );
+    try {
+      if (rule.identityId) {
+        await ecp.switchIdentity(rule.identityId);
       }
-    }
 
-    if (!config.dryRun) {
-      Object.assign(nextState, notification.nextState);
+      const result = await queryRule(ecp, rule);
+      const notification = buildNotification(result, nextState, rule);
+      if (!notification) {
+        continue;
+      }
+
+      if (config.dryRun) {
+        console.log(`[DRY RUN] ${rule.name}`);
+        console.log(notification.previewText);
+      } else {
+        const deliveryResult = await deliverNotification(config, rule, notification);
+        if (!deliveryResult.delivered) {
+          throw new Error(
+            `No notification destinations succeeded for ${rule.name}: ${deliveryResult.errors.join(" | ")}`
+          );
+        }
+      }
+
+      if (!config.dryRun) {
+        Object.assign(nextState, notification.nextState);
+      }
+      sentRuleCount += 1;
+      overdueCount += notification.counts.overdue;
+      dueSoonCount += notification.counts.dueSoon;
+    } catch (err) {
+      console.error(`[error] Rule "${rule.name}" failed: ${err.message}`);
+      ruleErrors.push({ rule: rule.name, error: err.message });
     }
-    sentRuleCount += 1;
-    overdueCount += notification.counts.overdue;
-    dueSoonCount += notification.counts.dueSoon;
+  }
+
+  if (ruleErrors.length > 0 && sentRuleCount === 0) {
+    throw new Error(
+      `All rules failed:\n${ruleErrors.map((e) => `  ${e.rule}: ${e.error}`).join("\n")}`
+    );
   }
 
   if (sentRuleCount === 0) {
