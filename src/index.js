@@ -326,8 +326,11 @@ function loadRules(defaultRule) {
     return defaultRule.to || defaultRule.teamsWebhookUrl ? [normalizeRule(defaultRule, 0)] : [];
   }
 
+  // Delivery fields (to, teamsWebhookUrl, teamsWebhookEnv) must NOT be inherited from
+  // defaultRule — a Teams-only rule that omits "to" should get no LINE target, not LINE_TO.
+  const { to: _dt, teamsWebhookUrl: _dw, teamsWebhookEnv: _de, ...queryDefaults } = defaultRule;
   return rawRules
-    .map((rule, index) => normalizeRule({ ...defaultRule, ...rule }, index))
+    .map((rule, index) => normalizeRule({ ...queryDefaults, ...rule }, index))
     .filter((rule) => rule.enabled);
 }
 
